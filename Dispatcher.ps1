@@ -44,26 +44,30 @@ param(
 # Strip leading dash if provided (for backwards compatibility)
 $ScriptName = $ScriptName.TrimStart('-')
 
-$BaseDir    = "D:\LocalScripts"
-$GroupDir   = Join-Path $BaseDir $Group
-$ScriptPath = Join-Path $GroupDir "$ScriptName.ps1"
+$BaseDir = "D:\LocalScripts"
 
-# --- Validation ---
-if (-not (Test-Path $GroupDir)) {
-    Write-Host "Group '$Group' not found. Expected folder: $GroupDir" -ForegroundColor Red
+# --- Case-insensitive resolution ---
+$GroupDir = Get-ChildItem $BaseDir -Directory |
+    Where-Object { $_.Name -ieq $Group } |
+    Select-Object -First 1 -ExpandProperty FullName
+
+if (-not $GroupDir) {
+    Write-Host "Group '$Group' not found." -ForegroundColor Red
     Write-Host ""
     Write-Host "Available groups:" -ForegroundColor Yellow
     Get-ChildItem $BaseDir -Directory | ForEach-Object { Write-Host "  $($_.Name)" }
     exit 1
 }
 
-if (-not (Test-Path $ScriptPath)) {
+$ScriptPath = Get-ChildItem $GroupDir -Filter "*.ps1" |
+    Where-Object { $_.BaseName -ieq $ScriptName } |
+    Select-Object -First 1 -ExpandProperty FullName
+
+if (-not $ScriptPath) {
     Write-Host "Script '$ScriptName' not found in group '$Group'." -ForegroundColor Red
     Write-Host ""
     Write-Host "Available scripts in '$Group':" -ForegroundColor Yellow
-    Get-ChildItem $GroupDir -Filter "*.ps1" | ForEach-Object {
-        Write-Host "  $($_.BaseName)"
-    }
+    Get-ChildItem $GroupDir -Filter "*.ps1" | ForEach-Object { Write-Host "  $($_.BaseName)" }
     exit 1
 }
 
